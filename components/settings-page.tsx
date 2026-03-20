@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useCallback, useSyncExternalStore, useEffect } from 'react';
 import { useTheme } from './theme-provider';
+import { useAuth } from '@/lib/auth-context';
 
 interface Settings {
   apiKey: string;
@@ -64,6 +65,7 @@ export default function SettingsPage() {
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const isHydrated = useIsHydrated();
   const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
 
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
 
@@ -140,6 +142,32 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-6">
+          {user && (
+            <section className="opacity-0 animate-fade-up bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl overflow-hidden">
+              <div className="px-6 py-5 border-b border-[var(--border-primary)]">
+                <h2 className="font-medium text-[var(--text-primary)]">Account</h2>
+                <p className="text-sm text-[var(--text-muted)] mt-1">Manage your account</p>
+              </div>
+
+              <div className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      {user.displayName || 'User'}
+                    </p>
+                    <p className="text-sm text-[var(--text-muted)]">{user.email}</p>
+                  </div>
+                  <button
+                    onClick={signOut}
+                    className="px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className="opacity-0 animate-fade-up stagger-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl overflow-hidden">
             <div className="px-6 py-5 border-b border-[var(--border-primary)]">
               <h2 className="font-medium text-[var(--text-primary)]">API Configuration</h2>

@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 
 const navItems = [
   { href: '/search', label: 'Search' },
@@ -11,6 +12,9 @@ const navItems = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  if (!user) return null;
 
   return (
     <nav className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] sticky top-0 z-50">
