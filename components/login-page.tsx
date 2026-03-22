@@ -47,20 +47,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-6">
-      <div className="w-full max-w-sm animate-fade-up">
-        <div className="text-center mb-8">
-          <h1 className="font-display text-4xl text-[var(--text-primary)] mb-2">
-            Welcome to Sift
-          </h1>
-          <p className="text-[var(--text-tertiary)]">
-            Sign in to start screening resumes
-          </p>
-        </div>
+    <div className="fixed inset-0 flex">
+      <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-8 sm:px-16 lg:px-24">
+        <div className="max-w-md mx-auto w-full">
+          <div className="mb-12 text-center">
+            <h1 className="font-display text-4xl text-neutral-900">Sift</h1>
+          </div>
 
-        <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl p-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
             </div>
           )}
@@ -69,7 +64,7 @@ export default function LoginPage() {
             <button
               onClick={handleGoogleSignIn}
               disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--bg-tertiary)] hover:bg-[var(--border-primary)] border border-[var(--border-primary)] rounded-lg text-[var(--text-primary)] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center gap-4 px-4 py-3 bg-white border border-neutral-200 rounded-lg text-neutral-700 font-medium hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading === 'google' ? (
                 <Spinner />
@@ -82,7 +77,7 @@ export default function LoginPage() {
             <button
               onClick={handleGithubSignIn}
               disabled={loading !== null}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--bg-tertiary)] hover:bg-[var(--border-primary)] border border-[var(--border-primary)] rounded-lg text-[var(--text-primary)] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center gap-4 px-4 py-3 bg-white border border-neutral-200 rounded-lg text-neutral-700 font-medium hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading === 'github' ? (
                 <Spinner />
@@ -93,10 +88,20 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <p className="mt-6 text-center text-xs text-[var(--text-muted)]">
-            By signing in, you agree to our Terms of Service and Privacy Policy
+          <p className="mt-8 text-neutral-500 text-sm text-center">
+            By signing in, you agree to our{' '}
+            <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>
           </p>
         </div>
+      </div>
+
+      <div className="hidden lg:flex w-1/2 bg-neutral-950 flex-col items-center justify-center px-16">
+        <p className="text-white tracking-[0.25em] text-sm font-medium mb-6">
+          AI-POWERED RECRUITING
+        </p>
+        <h2 className="font-display text-5xl text-white text-center leading-tight">
+          Find the right talent<br />with natural language
+        </h2>
       </div>
     </div>
   )
@@ -104,7 +109,7 @@ export default function LoginPage() {
 
 function Spinner() {
   return (
-    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+    <svg className="animate-spin h-5 w-5 text-neutral-500" viewBox="0 0 24 24">
       <circle
         className="opacity-25"
         cx="12"
@@ -148,7 +153,7 @@ function GoogleIcon() {
 
 function GithubIcon() {
   return (
-    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+    <svg className="h-5 w-5" fill="#24292f" viewBox="0 0 24 24">
       <path
         fillRule="evenodd"
         clipRule="evenodd"
