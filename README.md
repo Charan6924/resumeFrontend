@@ -22,7 +22,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the app.
 - **Framework**: Next.js 16 with App Router
 - **Language**: TypeScript 5
 - **Styling**: Tailwind CSS 4
-- **Fonts**: Inter (body) + Fraunces (display) via `next/font`
+- **Fonts**: Geist via `next/font` (Vercel's enterprise font)
 - **Icons**: Lucide React
 - **Auth**: Firebase Authentication
 

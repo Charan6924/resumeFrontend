@@ -1,19 +1,13 @@
 import './globals.css'
-import { Inter, Fraunces } from 'next/font/google'
+import { Geist } from 'next/font/google'
 import Navbar from '@/components/navbar'
 import { ThemeProvider } from '@/components/theme-provider'
 import { AuthProvider } from '@/lib/auth-context'
 import AuthGuard from '@/components/auth-guard'
 
-const inter = Inter({
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-body',
-  display: 'swap',
-})
-
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-geist',
   display: 'swap',
 })
 
@@ -28,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`h-full dark ${inter.variable} ${fraunces.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`h-full dark ${geist.variable}`} suppressHydrationWarning>
       <body className="h-full flex flex-col antialiased">
         <AuthProvider>
           <ThemeProvider>
