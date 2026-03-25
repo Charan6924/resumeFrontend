@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sift
+
+AI-powered resume screening platform. Recruiters search candidates using natural language queries instead of rigid filters.
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - Start development server
+- `npm run build` - Production build
+- `npm run lint` - Run ESLint
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Framework**: Next.js 16 with App Router
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 4
+- **Fonts**: Inter (body) + Fraunces (display) via `next/font`
+- **Icons**: Lucide React
+- **Auth**: Firebase Authentication
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture Conventions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project follows the [Next.js LLM SOP v2.0](./Rules.md) conventions:
 
-## Deploy on Vercel
+### Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `app/` - Routing only (pages, layouts, loading states, error boundaries)
+- `src/components/` - Reusable UI components
+- `src/lib/` - Utilities and shared logic
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Rendering Strategy
+
+- **Server Components by default** - Pages are Server Components that render client components
+- **Leaf-node interactivity** - `'use client'` pushed to smallest interactive components
+- **Suspense boundaries** - Components using `useSearchParams()` wrapped in `<Suspense>`
+- **Loading states** - Every route has a `loading.tsx` for instant navigation feedback
+- **Error boundaries** - Root-level `error.tsx` catches unhandled exceptions
+
+### Navigation
+
+- Uses Next.js `<Link>` components for client-side navigation with prefetching
+- URL-based state for shareable/bookmarkable data (search queries, filters)
+
+### Styling
+
+- Tailwind CSS utility classes exclusively
+- CSS imports contained to root `layout.tsx`
+- CSS custom properties for theming (light/dark mode)
+- Variable fonts via `next/font` for optimal performance
+
+### State Management
+
+- **URL state** - Search params for shareable state
+- **Local state** - `useState` for ephemeral UI state
+- **Context** - Auth and theme providers at root level
+
+## Project Structure
+
+```
+app/
+├── layout.tsx          # Root layout with providers
+├── page.tsx            # Home page
+├── loading.tsx         # Root loading state
+├── error.tsx           # Error boundary
+├── globals.css         # Global styles and CSS variables
+├── login/
+├── search/             # Suspense-wrapped search page
+├── candidates/         # Suspense-wrapped candidates page
+├── upload/
+├── settings/
+└── terms/
+
+src/
+├── components/
+│   ├── navbar.tsx          # Navigation bar
+│   ├── upload-page.tsx     # File upload interface
+│   ├── search-page.tsx     # Search interface (URL state)
+│   ├── candidates-table.tsx # Candidates list (URL state)
+│   ├── settings-page.tsx   # Settings interface
+│   ├── auth-guard.tsx      # Route protection
+│   └── theme-provider.tsx  # Dark/light mode
+└── lib/
+    ├── auth-context.tsx    # Firebase auth context
+    └── firebase.ts         # Firebase configuration
+```

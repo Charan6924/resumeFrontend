@@ -1,12 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+
+import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SearchPage() {
-  const [query, setQuery] = useState('');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') || '');
   const [isFocused, setIsFocused] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    if (query.trim()) {
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
   };
 
   return (
@@ -18,7 +25,7 @@ export default function SearchPage() {
             <span className="italic">great hire</span>
           </h1>
           <p className="text-[var(--text-tertiary)] text-lg max-w-md mx-auto">
-            Describe what you're looking for in natural language
+            Describe what you&apos;re looking for in natural language
           </p>
         </div>
 

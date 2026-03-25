@@ -1,5 +1,6 @@
 'use client';
-import React from 'react';
+
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 
@@ -20,15 +21,15 @@ export default function Navbar() {
     <nav className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-14">
-          <a href="/" className="font-display text-xl text-[var(--text-primary)] tracking-tight">
+          <Link href="/" className="font-display text-xl text-[var(--text-primary)] tracking-tight">
             Sift
-          </a>
+          </Link>
 
           <div className="flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
                   className={`
@@ -40,7 +41,7 @@ export default function Navbar() {
                   `}
                 >
                   {item.label}
-                </a>
+                </Link>
               );
             })}
           </div>

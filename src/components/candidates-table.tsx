@@ -1,5 +1,7 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+
+import { useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Candidate {
   id: string;
@@ -84,9 +86,28 @@ function getInitials(name: string): string {
 }
 
 export default function CandidatesTable() {
-  const [filter, setFilter] = useState('');
-  const [sortField, setSortField] = useState<SortField>('uploadedAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const filter = searchParams.get('filter') || '';
+  const sortField = (searchParams.get('sort') as SortField) || 'uploadedAt';
+  const sortDirection = (searchParams.get('dir') as SortDirection) || 'desc';
+
+  const updateParams = (updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    router.push(`/candidates?${params.toString()}`);
+  };
+
+  const setFilter = (value: string) => updateParams({ filter: value });
+  const setSortField = (value: SortField) => updateParams({ sort: value });
+  const setSortDirection = (value: SortDirection) => updateParams({ dir: value });
 
   const filteredAndSorted = useMemo(() => {
     const lowerFilter = filter.toLowerCase();
@@ -140,7 +161,7 @@ export default function CandidatesTable() {
             </h1>
             <p className="text-[var(--text-tertiary)]">
               {filteredAndSorted.length} candidate{filteredAndSorted.length !== 1 ? 's' : ''}
-              {filter && <span className="text-[var(--text-muted)]"> matching "{filter}"</span>}
+              {filter && <span className="text-[var(--text-muted)]"> matching &ldquo;{filter}&rdquo;</span>}
             </p>
           </div>
 
