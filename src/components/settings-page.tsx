@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useCallback, useSyncExternalStore, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from './theme-provider';
 import { useAuth } from '@/lib/auth-context';
 
@@ -66,6 +67,7 @@ export default function SettingsPage() {
   const isHydrated = useIsHydrated();
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const router = useRouter();
 
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
 
@@ -158,7 +160,10 @@ export default function SettingsPage() {
                     <p className="text-sm text-[var(--text-muted)]">{user.email}</p>
                   </div>
                   <button
-                    onClick={signOut}
+                    onClick={() => {
+                      router.push('/');
+                      signOut();
+                    }}
                     className="px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
                   >
                     Sign out

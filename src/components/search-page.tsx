@@ -22,7 +22,7 @@ export default function SearchPage() {
         <div className="text-center mb-12 opacity-0 animate-fade-up">
           <h1 className="font-display text-5xl md:text-6xl text-[var(--text-primary)] mb-4 tracking-tight">
             Find your next<br />
-            <span className="italic">great hire</span>
+            <span className="text-orange-500">great hire</span>
           </h1>
           <p className="text-[var(--text-tertiary)] text-lg max-w-md mx-auto">
             Describe what you&apos;re looking for in natural language

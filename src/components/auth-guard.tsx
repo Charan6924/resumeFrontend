@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 
-const publicRoutes = ['/login', '/terms']
+const publicRoutes = ['/', '/login', '/terms']
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -14,7 +14,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user && !isPublicRoute) {
-      router.push('/login')
+      router.push('/')
     }
   }, [user, loading, isPublicRoute, router])
 
