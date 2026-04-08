@@ -2,7 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { signInWithPopup } from 'firebase/auth'
+import {
+  signInWithPopup,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
+  OAuthCredential,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+} from 'firebase/auth'
 import { auth, googleProvider, githubProvider } from '@/lib/firebase'
 import { useAuth } from '@/lib/auth-context'
 
@@ -13,10 +20,24 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (user) {
-      router.push('/search')
-    }
+    if (user) router.push('/search')
   }, [user, router])
+
+  let pendingGithubCredential: OAuthCredential | null = null
+
+  const handleAccountConflict = async (err: unknown) => {
+    const firebaseError = err as FirebaseError
+
+    if (firebaseError.code !== 'auth/account-exists-with-different-credential') {
+      throw err
+    }
+
+    pendingGithubCredential = GithubAuthProvider.credentialFromError(firebaseError)
+    
+    throw new Error(
+      'An account already exists with this email. Please sign in with Google to link your GitHub account.'
+    )
+}
 
   const handleGoogleSignIn = async () => {
     setLoading('google')
@@ -25,8 +46,13 @@ export default function LoginPage() {
       await signInWithPopup(auth, googleProvider)
       router.push('/search')
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to sign in with Google'
-      setError(message)
+      try {
+        await handleAccountConflict(err)
+        router.push('/search') // conflict resolved, proceed
+      } catch (finalErr: unknown) {
+        const message = finalErr instanceof Error ? finalErr.message : 'Failed to sign in with Google'
+        setError(message)
+      }
     } finally {
       setLoading(null)
     }
@@ -39,12 +65,18 @@ export default function LoginPage() {
       await signInWithPopup(auth, githubProvider)
       router.push('/search')
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to sign in with GitHub'
-      setError(message)
+      try {
+        await handleAccountConflict(err)
+        router.push('/search') // conflict resolved, proceed
+      } catch (finalErr: unknown) {
+        const message = finalErr instanceof Error ? finalErr.message : 'Failed to sign in with GitHub'
+        setError(message)
+      }
     } finally {
       setLoading(null)
     }
   }
+
 
   return (
     <div className="fixed inset-0 flex">

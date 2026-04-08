@@ -118,7 +118,7 @@ export default function SettingsPage() {
   };
 
   const selectedModel = MODELS.find(m => m.id === settings.model) || MODELS[0];
-  const isDark = theme === 'dark';
+  const isDark = theme === 'light';
 
   if (!isHydrated) {
     return (
