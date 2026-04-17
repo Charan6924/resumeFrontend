@@ -11,17 +11,17 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
-const STORAGE_KEY = 'resume-screener-theme';
+const STORAGE_KEY = 'resume-screener-theme-v2';
 
 function getStoredTheme(): Theme {
-  if (typeof window === 'undefined') return 'dark';
+  if (typeof window === 'undefined') return 'light';
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') return stored;
   } catch {
     // Ignore
   }
-  return 'dark';
+  return 'light';
 }
 
 function subscribeToNothing() {

@@ -1,13 +1,60 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+interface SearchResult {
+  candidate_id: string;
+  name: string;
+  email: string;
+  summary: string;
+  score: number;
+  resume_file_url: string;
+}
 
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [isFocused, setIsFocused] = useState(false);
+  const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const urlQuery = searchParams.get('q') || '';
+
+  useEffect(() => {
+    if (!urlQuery) {
+      setResults(null);
+      return;
+    }
+    let cancelled = false;
+    async function runSearch() {
+      setSearching(true);
+      setSearchError(null);
+      try {
+        const { auth } = await import('@/lib/firebase');
+        const token = await auth.currentUser?.getIdToken();
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ query: urlQuery, top_k: 10, rerank: true }),
+        });
+        if (!res.ok) throw new Error(`Search failed (${res.status})`);
+        const data = await res.json();
+        if (!cancelled) setResults(data);
+      } catch (err) {
+        if (!cancelled) setSearchError(err instanceof Error ? err.message : 'Search failed');
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }
+    runSearch();
+    return () => { cancelled = true; };
+  }, [urlQuery]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,18 +110,80 @@ export default function SearchPage() {
           </button>
         </form>
 
-        <div className="mt-16 grid grid-cols-3 gap-8 opacity-0 animate-fade-up stagger-3">
-          {[
-            { value: '10K+', label: 'Resumes' },
-            { value: '95%', label: 'Accuracy' },
-            { value: '<2s', label: 'Search' },
-          ].map((stat, i) => (
-            <div key={i} className="text-center">
-              <div className="font-display text-3xl text-[var(--text-primary)] mb-1">{stat.value}</div>
-              <div className="text-sm text-[var(--text-muted)]">{stat.label}</div>
-            </div>
-          ))}
-        </div>
+        {!urlQuery && (
+          <div className="mt-16 grid grid-cols-3 gap-8 opacity-0 animate-fade-up stagger-3">
+            {[
+              { value: '10K+', label: 'Resumes' },
+              { value: '95%', label: 'Accuracy' },
+              { value: '<2s', label: 'Search' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="font-display text-3xl text-[var(--text-primary)] mb-1">{stat.value}</div>
+                <div className="text-sm text-[var(--text-muted)]">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {urlQuery && (
+          <div className="mt-8">
+            {searching && (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[var(--border-primary)] border-t-[var(--text-primary)] rounded-full animate-spin" />
+              </div>
+            )}
+
+            {searchError && (
+              <div className="p-4 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl text-[var(--text-secondary)] text-sm">
+                {searchError}
+              </div>
+            )}
+
+            {results && results.length === 0 && !searching && (
+              <div className="text-center py-12 text-[var(--text-tertiary)]">
+                No candidates match your search
+              </div>
+            )}
+
+            {results && results.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm text-[var(--text-muted)] mb-4">{results.length} result{results.length !== 1 ? 's' : ''}</p>
+                {results.map((r) => (
+                  <div
+                    key={r.candidate_id}
+                    className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-5 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-[var(--text-primary)] font-medium">{r.name}</p>
+                        <p className="text-[var(--text-muted)] text-sm mt-0.5">{r.email}</p>
+                        {r.summary && (
+                          <p className="text-[var(--text-secondary)] text-sm mt-2 leading-relaxed">{r.summary}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <span className="text-xs font-medium text-[var(--text-muted)] bg-[var(--bg-tertiary)] px-2 py-1 rounded-lg">
+                          {Math.round(r.score * 100)}%
+                        </span>
+                        {r.resume_file_url && (
+                          <a
+                            href={r.resume_file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                          >
+                            View resume
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

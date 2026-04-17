@@ -415,15 +415,9 @@ export default function LandingPage() {
                 <Link href="/terms" className="hover:text-neutral-900 transition-colors">Terms</Link>
               </div>
             </div>
-            <p className="text-sm text-neutral-400">© 2025 Sift. All rights reserved.</p>
+            <p className="text-sm text-neutral-400">© 2026 Sift. All rights reserved.</p>
           </div>
 
-          {/* Large Brand Name */}
-          <div className="mt-16 overflow-hidden">
-            <p className="font-display font-semibold text-[12vw] md:text-[10vw] leading-none text-neutral-100 text-center select-none">
-              Sift
-            </p>
-          </div>
         </div>
       </footer>
     </div>

@@ -10,16 +10,16 @@ interface Settings {
   maxResults: number;
   autoSave: boolean;
   compactView: boolean;
-  temperature: number;
+  systemPrompt: string;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
-  model: 'gpt-4o',
+  model: 'gpt-4.1',
   maxResults: 10,
   autoSave: false,
   compactView: false,
-  temperature: 0.5,
+  systemPrompt: '',
 };
 
 const STORAGE_KEY = 'resume-screener-settings';
@@ -51,10 +51,16 @@ function useIsHydrated() {
 }
 
 const MODELS = [
+  { id: 'gpt-4.1', name: 'GPT-4.1', description: 'Smartest non-reasoning model' },
   { id: 'gpt-4o', name: 'GPT-4o', description: 'Most capable' },
   { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and efficient' },
-  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', description: 'Large context' },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Legacy' },
+  { id: 'gpt-5.4', name: 'GPT-5.4', description: 'Best intelligence at scale for agentic, coding, and professional workflows' },
+  { id: 'gpt-5.4-pro', name: 'GPT-5.4 Pro', description: 'Smarter and more precise responses' },
+  { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', description: 'Strongest mini model for coding, computer use, and subagents' },
+  { id: 'gpt-5.4-nano', name: 'GPT-5.4 Nano', description: 'Cheapest GPT-5.4-class model for simple high-volume tasks' },
+  { id: 'gpt-5', name: 'GPT-5', description: 'Intelligent reasoning for coding and agentic tasks' },
+  { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Near-frontier, cost sensitive, low latency' },
+  { id: 'gpt-5-nano', name: 'GPT-5 Nano', description: 'Fastest, most cost-efficient version of GPT-5' },
 ];
 
 export default function SettingsPage() {
@@ -64,7 +70,18 @@ export default function SettingsPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const modelWrapperRef = React.useRef<HTMLDivElement>(null);
   const isHydrated = useIsHydrated();
+
+  useEffect(() => {
+    if (!modelDropdownOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (modelWrapperRef.current?.contains(e.target as Node)) return;
+      setModelDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [modelDropdownOpen]);
   const { theme, setTheme } = useTheme();
   const { user, signOut } = useAuth();
   const router = useRouter();
@@ -118,7 +135,7 @@ export default function SettingsPage() {
   };
 
   const selectedModel = MODELS.find(m => m.id === settings.model) || MODELS[0];
-  const isDark = theme === 'light';
+  const isDark = theme === 'dark';
 
   if (!isHydrated) {
     return (
@@ -173,7 +190,7 @@ export default function SettingsPage() {
             </section>
           )}
 
-          <section className="opacity-0 animate-fade-up stagger-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl overflow-hidden">
+          <section className="opacity-0 animate-fade-up stagger-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl relative z-10">
             <div className="px-6 py-5 border-b border-[var(--border-primary)]">
               <h2 className="font-medium text-[var(--text-primary)]">API Configuration</h2>
               <p className="text-sm text-[var(--text-muted)] mt-1">Connect to OpenAI services</p>
@@ -215,7 +232,7 @@ export default function SettingsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Model</label>
-                <div className="relative">
+                <div ref={modelWrapperRef} className="relative">
                   <button
                     type="button"
                     onClick={() => setModelDropdownOpen(!modelDropdownOpen)}
@@ -231,32 +248,26 @@ export default function SettingsPage() {
                   </button>
 
                   {modelDropdownOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setModelDropdownOpen(false)}
-                      />
-                      <div className="absolute z-20 w-full mt-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-xl overflow-hidden">
-                        {MODELS.map((model) => (
-                          <button
-                            key={model.id}
-                            type="button"
-                            onClick={() => {
-                              updateSetting('model', model.id);
-                              setModelDropdownOpen(false);
-                            }}
-                            className={`w-full px-4 py-3 text-left transition-colors ${
-                              settings.model === model.id
-                                ? 'bg-[var(--bg-tertiary)]'
-                                : 'hover:bg-[var(--bg-tertiary)]'
-                            }`}
-                          >
-                            <span className="text-[var(--text-primary)] text-sm font-medium">{model.name}</span>
-                            <span className="text-[var(--text-muted)] text-xs ml-2">— {model.description}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </>
+                    <div className="absolute z-20 w-full mt-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-xl overflow-y-auto max-h-64">
+                      {MODELS.map((model) => (
+                        <button
+                          key={model.id}
+                          type="button"
+                          onClick={() => {
+                            updateSetting('model', model.id);
+                            setModelDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-3 text-left transition-colors ${
+                            settings.model === model.id
+                              ? 'bg-[var(--bg-tertiary)]'
+                              : 'hover:bg-[var(--bg-tertiary)]'
+                          }`}
+                        >
+                          <span className="text-[var(--text-primary)] text-sm font-medium">{model.name}</span>
+                          <span className="text-[var(--text-muted)] text-xs ml-2">— {model.description}</span>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -359,23 +370,27 @@ export default function SettingsPage() {
 
             <div className="p-6">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-medium text-[var(--text-secondary)]">Model Temperature</label>
-                  <span className="px-2.5 py-1 bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm font-mono rounded-lg">
-                    {settings.temperature.toFixed(1)}
-                  </span>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-[var(--text-secondary)]">System Prompt</label>
+                  {settings.systemPrompt && (
+                    <button
+                      type="button"
+                      onClick={() => updateSetting('systemPrompt', '')}
+                      className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={settings.temperature}
-                  onChange={(e) => updateSetting('temperature', parseFloat(e.target.value))}
-                  className="w-full h-2 bg-[var(--bg-tertiary)] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-neutral-900 dark:[&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer"
+                <textarea
+                  value={settings.systemPrompt}
+                  onChange={(e) => updateSetting('systemPrompt', e.target.value)}
+                  placeholder="You are a technical recruiter. Focus on engineering skills and system design experience..."
+                  rows={5}
+                  className="w-full px-4 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-xl text-[var(--text-primary)] text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-neutral-400 dark:focus:border-neutral-500 transition-all resize-none font-mono"
                 />
-                <p className="text-xs text-[var(--text-muted)] mt-3">
-                  Lower = predictable, Higher = creative
+                <p className="text-xs text-[var(--text-muted)] mt-2">
+                  Prepended to every search query. Overrides the default recruiter persona.
                 </p>
               </div>
             </div>

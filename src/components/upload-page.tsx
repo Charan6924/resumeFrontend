@@ -26,6 +26,7 @@ function getFileExtension(filename: string): string {
 export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<UploadStatus>('idle');
 
@@ -74,6 +75,7 @@ export default function UploadPage() {
       return;
     }
 
+    setSelectedFile(file);
     setFileInfo({
       name: file.name,
       size: file.size,
@@ -85,23 +87,45 @@ export default function UploadPage() {
     e.preventDefault();
     e.stopPropagation();
     setFileInfo(null);
+    setSelectedFile(null);
     setError(null);
     setStatus('idle');
   };
 
   const handleSubmit = async () => {
-    if (!fileInfo) return;
+    if (!fileInfo || !selectedFile) return;
 
     setStatus('uploading');
+    setError(null);
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const { auth } = await import('@/lib/firebase');
+      const token = await auth.currentUser?.getIdToken();
 
-    setStatus('success');
+      const formData = new FormData();
+      formData.append('file', selectedFile);
 
-    setTimeout(() => {
-      setFileInfo(null);
-      setStatus('idle');
-    }, 2000);
+      const res = await fetch('/api/upload-resume', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `Upload failed (${res.status})`);
+      }
+
+      setStatus('success');
+      setTimeout(() => {
+        setFileInfo(null);
+        setSelectedFile(null);
+        setStatus('idle');
+      }, 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+      setStatus('error');
+    }
   };
 
   return (
