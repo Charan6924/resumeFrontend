@@ -47,7 +47,7 @@ export default function CandidatesTable() {
       setLoading(true);
       setFetchError(null);
       try {
-        const token = await user.getIdToken();
+        const token = await user!.getIdToken();
         const res = await fetch('/api/candidates?limit=100', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -132,7 +132,7 @@ export default function CandidatesTable() {
 
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [filter, sortField, sortDirection]);
+  }, [candidates, filter, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

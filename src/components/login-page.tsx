@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
   GithubAuthProvider,
 } from 'firebase/auth'
+import { FirebaseError } from 'firebase/app'
 import { auth, googleProvider, githubProvider } from '@/lib/firebase'
 import { useAuth } from '@/lib/auth-context'
 
