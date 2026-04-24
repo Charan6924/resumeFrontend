@@ -2,6 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getSearchSettings, mapSearchError } from './search-guard';
+
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__|_/g, '')
+    .replace(/#+\s/g, '')
+    .replace(/\|/g, ' ')
+    .replace(/[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}/g, '')
+    .replace(/\+?[\d\s\-().]{10,}/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 
 interface SearchResult {
   candidate_id: string;
@@ -20,6 +34,7 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const urlQuery = searchParams.get('q') || '';
 
@@ -32,6 +47,14 @@ export default function SearchPage() {
     async function runSearch() {
       setSearching(true);
       setSearchError(null);
+
+      const { apiKey, systemPrompt } = getSearchSettings();
+      if (!apiKey) {
+        setSearchError('Please add your OpenAI API key in Settings before searching.');
+        setSearching(false);
+        return;
+      }
+
       try {
         const { auth } = await import('@/lib/firebase');
         const token = await auth.currentUser?.getIdToken();
@@ -41,9 +64,17 @@ export default function SearchPage() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ query: urlQuery, top_k: 10, rerank: true }),
+          body: JSON.stringify({ query: urlQuery, top_k: 10, rerank: true, api_key: apiKey, system_prompt: systemPrompt }),
         });
-        if (!res.ok) throw new Error(`Search failed (${res.status})`);
+
+        if (!res.ok) {
+          let body = '';
+          try { body = await res.text(); } catch { /* ignore */ }
+          const errMsg = mapSearchError(res.status, body) ?? `Search failed (${res.status})`;
+          if (!cancelled) setSearchError(errMsg);
+          return;
+        }
+
         const data = await res.json();
         if (!cancelled) setResults(data);
       } catch (err) {
@@ -63,17 +94,24 @@ export default function SearchPage() {
     }
   };
 
+  const hasResults = !!urlQuery;
+
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full">
-        <div className="text-center mb-12 opacity-0 animate-fade-up">
-          <h1 className="font-display text-5xl md:text-6xl text-[var(--text-primary)] mb-4 tracking-tight">
-            Find your next<br />
-            <span className="text-orange-500">great hire</span>
+    <div className={`min-h-screen bg-[var(--bg-primary)] p-6 ${hasResults ? '' : 'flex items-center justify-center'}`}>
+      <div className="max-w-2xl w-full mx-auto">
+        <div className={`text-center opacity-0 animate-fade-up ${hasResults ? 'mb-6' : 'mb-12'}`}>
+          <h1 className={`font-display text-[var(--text-primary)] tracking-tight ${hasResults ? 'text-3xl mb-1' : 'text-5xl md:text-6xl mb-4'}`}>
+            {hasResults ? (
+              <>Find your next <span className="text-orange-500">great hire</span></>
+            ) : (
+              <>Find your next<br /><span className="text-orange-500">great hire</span></>
+            )}
           </h1>
-          <p className="text-[var(--text-tertiary)] text-lg max-w-md mx-auto">
-            Describe what you&apos;re looking for in natural language
-          </p>
+          {!hasResults && (
+            <p className="text-[var(--text-tertiary)] text-lg max-w-md mx-auto">
+              Describe what you&apos;re looking for in natural language
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleSearch} className="opacity-0 animate-fade-up stagger-2">
@@ -95,19 +133,30 @@ export default function SearchPage() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={!query.trim()}
-            className={`
-              mt-4 w-full py-4 rounded-xl font-medium transition-all duration-200
-              ${query.trim()
-                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100'
-                : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] cursor-not-allowed'
-              }
-            `}
-          >
-            Search
-          </button>
+          <div className="mt-4 flex gap-3">
+            <button
+              type="submit"
+              disabled={!query.trim()}
+              className={`
+                flex-1 py-4 rounded-xl font-medium transition-all duration-200
+                ${query.trim()
+                  ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-100'
+                  : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)] cursor-not-allowed'
+                }
+              `}
+            >
+              Search
+            </button>
+            {urlQuery && (
+              <button
+                type="button"
+                onClick={() => { setQuery(''); router.push('/search'); }}
+                className="px-5 py-4 rounded-xl font-medium text-[var(--text-muted)] bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </form>
 
         {!urlQuery && (
@@ -135,7 +184,15 @@ export default function SearchPage() {
 
             {searchError && (
               <div className="p-4 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl text-[var(--text-secondary)] text-sm">
-                {searchError}
+                {searchError.includes('API key') && searchError.includes('Settings') ? (
+                  <>
+                    Please add your OpenAI API key in{' '}
+                    <a href="/settings" className="underline hover:text-[var(--text-primary)]">Settings</a>
+                    {' '}before searching.
+                  </>
+                ) : (
+                  searchError
+                )}
               </div>
             )}
 
@@ -148,38 +205,47 @@ export default function SearchPage() {
             {results && results.length > 0 && (
               <div className="space-y-3">
                 <p className="text-sm text-[var(--text-muted)] mb-4">{results.length} result{results.length !== 1 ? 's' : ''}</p>
-                {results.map((r) => (
-                  <div
-                    key={r.candidate_id}
-                    className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-5 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-[var(--text-primary)] font-medium">{r.name}</p>
-                        <p className="text-[var(--text-muted)] text-sm mt-0.5">{r.email}</p>
-                        {r.summary && (
-                          <p className="text-[var(--text-secondary)] text-sm mt-2 leading-relaxed">{r.summary}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <span className="text-xs font-medium text-[var(--text-muted)] bg-[var(--bg-tertiary)] px-2 py-1 rounded-lg">
-                          {Math.round(r.score * 100)}%
-                        </span>
-                        {r.resume_file_url && (
-                          <a
-                            href={r.resume_file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                          >
-                            View resume
-                          </a>
-                        )}
+                {results.map((r) => {
+                  const isExpanded = expandedId === r.candidate_id;
+                  return (
+                    <div
+                      key={r.candidate_id}
+                      onClick={() => setExpandedId(isExpanded ? null : r.candidate_id)}
+                      className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-5 hover:border-neutral-400 dark:hover:border-neutral-500 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-[var(--text-primary)] font-medium">{r.name}</p>
+                          <p className="text-[var(--text-muted)] text-sm mt-0.5">{r.email}</p>
+                          {r.summary && (
+                            <p className={`text-[var(--text-secondary)] text-sm mt-2 leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
+                              {stripMarkdown(r.summary)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <span className="text-xs font-medium text-[var(--text-muted)] bg-[var(--bg-tertiary)] px-2 py-1 rounded-lg">
+                            {Math.round(r.score * 100)}%
+                          </span>
+                          {r.resume_file_url && (
+                            <a
+                              href={r.resume_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+                            >
+                              View resume
+                            </a>
+                          )}
+                          {r.summary && (
+                            <span className="text-xs text-[var(--text-muted)]">{isExpanded ? 'Less ↑' : 'More ↓'}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

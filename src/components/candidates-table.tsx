@@ -28,6 +28,56 @@ function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__|_/g, '')
+    .replace(/#+\s/g, '')
+    .replace(/\|/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+interface ParsedSummary {
+  role: string;
+  location: string;
+  excerpt: string;
+}
+
+function parseSummary(raw: string, candidateName: string): ParsedSummary {
+  let text = stripMarkdown(raw);
+
+  // Remove the candidate name from the start
+  if (text.startsWith(candidateName)) {
+    text = text.slice(candidateName.length).trim();
+  }
+
+  // Remove email addresses
+  text = text.replace(/[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}/g, '');
+  // Remove phone numbers
+  text = text.replace(/\+?[\d\s\-().]{10,}/g, '');
+  // Remove leftover separators
+  text = text.replace(/[·|,]\s*[·|,]/g, '·').replace(/^\s*[·|,\-–]\s*/gm, '').trim();
+  text = text.replace(/\s{2,}/g, ' ').trim();
+
+  // Extract location: pattern like "City, ST" or "City, State"
+  const locationMatch = text.match(/([A-Z][a-zA-Z\s]+,\s*[A-Z]{2}(?:\s|$))/);
+  const location = locationMatch ? locationMatch[1].trim() : '';
+  if (location) text = text.replace(location, '').trim();
+
+  // The role is likely the first sentence-like chunk before a location-type break
+  // Heuristic: role = first 2-5 words that look like a title (before "–", "-", or known keywords)
+  const roleMatch = text.match(/^([^.\n]{5,60}?)(?:\s*[–\-]\s|\s+(?:Email|Phone|Professional|Summary|I am|With \d)|$)/);
+  const role = roleMatch ? roleMatch[1].replace(/^[\s·,]+|[\s·,]+$/g, '').trim() : '';
+  if (role) text = text.slice(role.length).trim();
+
+  // Clean up remaining text
+  const excerpt = text.replace(/^[\s·,\-–]+/, '').replace(/\s{2,}/g, ' ').trim();
+
+  return { role, location, excerpt };
+}
+
 export default function CandidatesTable() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,6 +85,7 @@ export default function CandidatesTable() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [expandedSummary, setExpandedSummary] = useState<string | null>(null);
 
   const filter = searchParams.get('filter') || '';
   const sortField = (searchParams.get('sort') as SortField) || 'uploadedAt';
@@ -252,8 +303,35 @@ export default function CandidatesTable() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5 text-[var(--text-secondary)] text-sm max-w-sm">
-                        <span className="line-clamp-2">{candidate.summary}</span>
+                      <td
+                        className="px-6 py-5 max-w-sm cursor-pointer group"
+                        onClick={(e) => { e.stopPropagation(); setExpandedSummary(candidate.id); }}
+                      >
+                        {(() => {
+                          const { role, location, excerpt } = parseSummary(candidate.summary, candidate.name);
+                          return (
+                            <div className="space-y-1">
+                              <div className="flex items-center flex-wrap gap-x-2 gap-y-1">
+                                {role && (
+                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-primary)]">
+                                    {role}
+                                  </span>
+                                )}
+                                {location && (
+                                  <span className="text-xs text-[var(--text-muted)]">{location}</span>
+                                )}
+                              </div>
+                              {excerpt && (
+                                <p className="text-sm text-[var(--text-secondary)] line-clamp-2 leading-relaxed group-hover:text-[var(--text-primary)] transition-colors">
+                                  {excerpt}
+                                </p>
+                              )}
+                              {!role && !excerpt && (
+                                <span className="text-sm text-[var(--text-muted)]">—</span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-5">
                         {candidate.resume_file_url && (
@@ -287,6 +365,51 @@ export default function CandidatesTable() {
           </div>
         )}
       </div>
+
+      {expandedSummary && (() => {
+        const candidate = candidates.find(c => c.id === expandedSummary);
+        if (!candidate) return null;
+        const { role, location } = parseSummary(candidate.summary, candidate.name);
+        const fullText = stripMarkdown(candidate.summary)
+          .replace(/[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}/g, '')
+          .replace(/\+?[\d\s\-().]{10,}/g, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={() => setExpandedSummary(null)}
+          >
+            <div
+              className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl p-6 max-w-lg w-full shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-[var(--text-primary)] font-semibold text-lg">{candidate.name}</h2>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {role && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-primary)]">
+                        {role}
+                      </span>
+                    )}
+                    {location && <span className="text-xs text-[var(--text-muted)]">{location}</span>}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setExpandedSummary(null)}
+                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors text-lg leading-none mt-0.5"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
+                {fullText}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
